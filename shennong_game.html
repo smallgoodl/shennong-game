@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神农 · 百草绘卷 (完整原型)</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --ink-color: #2c2c2c;
+            --wood-color: #6d8e78; /* 木族青 */
+            --beast-color: #d4af37; /* 妖族金 */
+            --human-color: #c0392b; /* 人族红 */
+            --ssr-color: #f1c40f;
+            --sr-color: #9b59b6;
+            --r-color: #3498db;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: "KaiTi", "楷体", "STKaiti", serif;
+            background-color: #f0f0e8;
+            background-image: radial-gradient(#d0d0c0 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--ink-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- 顶部导航 --- */
+        header {
+            background: var(--ink-color);
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+
+        h1 { margin: 0; font-size: 1.5em; }
+        
+        .resource-bar {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+
+        /* --- 主内容区 --- */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .view-section {
+            display: none; /* 默认隐藏 */
+            width: 100%;
+            max-width: 800px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 底部标签栏 --- */
+        nav {
+            background: #fff;
+            border-top: 1px solid #ccc;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 1.1em;
+            color: #666;
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .nav-btn.active {
+            background: var(--ink-color);
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* --- 通用组件 --- */
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid #ddd;
+        }
+
+        .btn {
+            background: var(--ink-color);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-size: 1em;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-ssr { background: var(--human-color); }
+        .btn-wood { background: var(--wood-color); }
+
+        /* --- 卡牌样式 --- */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            padding: 0;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .card.selected { border-color: #e74c3c; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.5); }
+
+        .card-img-box {
+            width: 100%;
+            height: 120px;
+            background: #eee;
+            overflow: hidden;
+            border-bottom: 1px solid #eee;
+        }
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        .card:hover .card-img { transform: scale(1.1); }
+
+        .card-info { padding: 8px 5px; }
+
+        .card.R { border-color: var(--r-color); }
+        .card.SR { border-color: var(--sr-color); }
+        .card.SSR { border-color: var(--ssr-color); background: linear-gradient(135deg, #fff 80%, #fff5d7 100%); }
+
+        .card-rarity { 
+            position: absolute; 
+            top: 5px; 
+            left: 5px; 
+            background: rgba(0,0,0,0.6); 
+            color: #fff; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 0.7em; 
+            font-weight: bold;
+            z-index: 2;
+        }
+        .R .card-rarity { color: var(--r-color); }
+        .SR .card-rarity { color: var(--sr-color); }
+        .SSR .card-rarity { color: var(--ssr-color); }
+
+        .card-name { font-weight: bold; margin: 5px 0; font-size: 0.95em; }
+        .card-faction { font-size: 0.7em; padding: 2px 4px; border-radius: 3px; color: #fff; display: inline-block; }
+        .faction-wood { background: var(--wood-color); }
+        .faction-beast { background: var(--beast-color); }
+        .faction-human { background: var(--human-color); }
+
+        .card-stars { color: #f39c12; font-size: 0.8em; }
+
+        /* --- 战斗样式 --- */
+        .battle-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .battle-team { width: 45%; }
+        .battle-vs { font-weight: bold; font-size: 1.5em; color: #999; }
+        
+        .log-box {
+            height: 200px;
+            overflow-y: auto;
+            background: #333;
+            color: #eee;
+            padding: 10px;
+            font-size: 0.9em;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .log-turn { color: #f1c40f; border-bottom: 1px dashed #555; margin-top: 5px; }
+        .log-heal { color: #2ecc71; }
+        .log-dmg { color: #e74c3c; }
+        .log-buff { color: #3498db; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>神农 · 百草绘卷</h1>
+        <div class="resource-bar">
+            <span>💎 灵石: <b id="res-gem">1000</b> <button class="btn" style="padding: 2px 8px; font-size: 0.8em;" onclick="game.recharge()">+</button></span>
+            <span>💊 碎片: <b id="res-fragment">0</b></span>
+        </div>
+    </header>
+
+    <main>
+        <!-- 1. 抽卡界面 -->
+        <div id="view-gacha" class="view-section active">
+            <div class="panel" style="text-align: center;">
+                <h2>祈愿召唤</h2>
+                <p>SSR概率: 1.2% | 40抽保底 | 重复获得碎片</p>
+                <div style="font-size: 3em; margin: 20px;">🔮</div>
+                <p>保底进度: <span id="pity-count">0</span>/40</p>
+                <div>
+                    <button class="btn" onclick="game.pull(1)">单抽 (10💎)</button>
+                    <button class="btn btn-ssr" onclick="game.pull(10)">十连 (100💎)</button>
+                </div>
+            </div>
+            <div id="gacha-result" class="panel card-grid" style="display:none"></div>
+        </div>
+
+        <!-- 2. 背包/养成界面 -->
+        <div id="view-bag" class="view-section">
+            <div class="panel">
+                <h2>我的百草园</h2>
+                <p>点击卡牌进行升级 (消耗碎片)</p>
+                <div id="inventory-grid" class="card-grid"></div>
+            </div>
+            
+            <div id="upgrade-panel" class="panel" style="display:none; border: 2px solid var(--ink-color);">
+                <h3>培养: <span id="up-name"></span></h3>
+                <p>当前星级: <span id="up-star"></span> ⭐</p>
+                <p>属性: 生命 <span id="up-hp"></span> / 攻击 <span id="up-atk"></span></p>
+                <p>天赋: <span id="up-skill"></span></p>
+                <p>升级消耗: <span id="up-cost"></span> 碎片 (当前拥有: <span id="up-own"></span>)</p>
+                <button class="btn btn-wood" onclick="game.starUp()">⭐ 升星</button>
+                <button class="btn" onclick="document.getElementById('upgrade-panel').style.display='none'">关闭</button>
+            </div>
+        </div>
+
+        <!-- 3. 战斗界面 -->
+        <div id="view-battle" class="view-section">
+            <div class="panel">
+                <h2>出战阵容</h2>
+                <p>请选择5名角色 (已选: <span id="team-count">0</span>/5)</p>
+                <div id="battle-roster" class="card-grid"></div>
+                <p id="bond-bonus" style="color: var(--human-color); font-weight: bold; display: none;">✨ 羁绊激活: 全属性 +15%</p>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button class="btn btn-ssr" onclick="game.startBattle()">⚔️ 开始讨伐 (病魔)</button>
+                </div>
+            </div>
+
+            <div id="battle-stage" class="panel" style="display:none">
+                <div class="battle-area">
+                    <div class="battle-team">
+                        <h4>我方 (神农百草)</h4>
+                        <div id="my-team-stats">HP: 100%</div>
+                    </div>
+                    <div class="battle-vs">VS</div>
+                    <div class="battle-team" style="text-align: right;">
+                        <h4>敌方 (瘟疫邪气)</h4>
+                        <div id="enemy-stats">HP: 100%</div>
+                    </div>
+                </div>
+                <div id="battle-log" class="log-box"></div>
+                <button class="btn" onclick="document.getElementById('battle-stage').style.display='none'">退出战场</button>
+            </div>
+        </div>
+    </main>
+
+    <nav>
+        <button class="nav-btn active" onclick="ui.switchTab('gacha', this)">🏮 祈愿</button>
+        <button class="nav-btn" onclick="ui.switchTab('bag', this)">🎒 养成</button>
+        <button class="nav-btn" onclick="ui.switchTab('battle', this)">⚔️ 讨伐</button>
+    </nav>
+
+    <script>
+        // --- 1. 核心数据 (Database) ---
+        // 注意：这里的 img 字段使用的是占位图服务。
+        // 如果您有本地图片，请将 "https://..." 替换为相对路径，例如 "images/lingzhi.png"
+        const DB = {
+            // 木族 (Wood) - 岐黄/坦克/输出
+            "灵芝": { type: "SSR", faction: "wood", job: "岐黄", skill: "起死回生", hp: 120, atk: 20, img: "立绘图片/灵芝.png" },
+            "茯苓": { type: "R", faction: "wood", job: "龙盾", skill: "健脾宁心", hp: 150, atk: 10, img: "立绘图片/茯苓.png" },
+            "金银花": { type: "R", faction: "wood", job: "破军", skill: "清热解毒", hp: 80, atk: 35, img: "立绘图片/金银花.png" },
+            "当归": { type: "SR", faction: "wood", job: "岐黄", skill: "补血活血", hp: 100, atk: 15, img: "立绘图片/当归.png" },
+            
+            // 妖族 (Beast) - 辅助/输出
+            "鹿茸": { type: "SSR", faction: "beast", job: "增益", skill: "壮元阳", hp: 110, atk: 25, img: "立绘图片/鹿茸.png" },
+            "地龙": { type: "SR", faction: "beast", job: "破军", skill: "通经活络", hp: 90, atk: 40, img: "立绘图片/地龙.png" },
+            "蜈蚣": { type: "SR", faction: "beast", job: "破军", skill: "以毒攻毒", hp: 85, atk: 45, img: "立绘图片/蜈蚣.png" },
+
+            // 人族 (Human) - 辅助/解控
+            "红枣": { type: "R", faction: "human", job: "岐黄", skill: "甘温益气", hp: 90, atk: 15, img: "立绘图片/红枣.png" },
+            "枸杞": { type: "R", faction: "human", job: "增益", skill: "滋肝明目", hp: 85, atk: 20, img: "立绘图片/枸杞.png" },
+            "生姜": { type: "R", faction: "human", job: "解控", skill: "温中散寒", hp: 80, atk: 25, img: "立绘图片/生姜.png" },
+        };
+
+        const FACTION_NAMES = { wood: "木族", beast: "妖族", human: "人族" };
+
+        // --- 2. 游戏状态 (State) ---
+        const state = {
+            gems: 2000,
+            pity: 0,
+            collection: {}, // { "红枣": { star: 1, fragments: 0 } }
+            team: [],       // Array of names
+            fragments: 0    // 通用碎片(简化演示) 或者 角色碎片. 这里为了简单，我们用"角色专属碎片"逻辑
+        };
+
+        // 初始化：送一点初始卡
+        function init() {
+            addCard("红枣");
+            addCard("茯苓");
+            ui.updateHeader();
+            ui.renderInventory();
+            ui.renderBattleRoster();
+        }
+
+        function addCard(name) {
+            if (!state.collection[name]) {
+                state.collection[name] = { star: 1, fragments: 0 };
+                return true; // New card
+            } else {
+                state.collection[name].fragments += 10; // Duplicate = 10 fragments
+                return false; // Duplicate
+            }
+        }
+
+        // --- 3. 逻辑控制器 (Game Logic) ---
+        const game = {
+            recharge: () => {
+                if(confirm("是否花费 6元 充值 6480 灵石？\n(演示功能，不扣费)")) {
+                    state.gems += 6480;
+                    ui.updateHeader();
+                    alert("充值成功！获得 6480 灵石！");
+                }
+            },
+
+            pull: (count) => {
+                const cost = count * 10;
+                if (state.gems < cost) { alert("灵石不足！"); return; }
+                state.gems -= cost;
+                
+                let results = [];
+                for(let i=0; i<count; i++) {
+                    state.pity++;
+                    let roll = Math.random() * 100;
+                    let rarity = "R";
+                    
+                    if (state.pity >= 40) { rarity = "SSR"; state.pity = 0; }
+                    else if (roll < 1.2) { rarity = "SSR"; state.pity = 0; }
+                    else if (roll < 15) { rarity = "SR"; }
+
+                    // Pick random char of rarity
+                    let pool = Object.keys(DB).filter(k => DB[k].type === rarity);
+                    let name = pool[Math.floor(Math.random() * pool.length)];
+                    
+                    let isNew = addCard(name);
+                    results.push({ name, rarity, isNew });
+                }
+                
+                ui.updateHeader();
+                ui.showGachaResults(results);
+                ui.renderInventory(); // Update inventory badge/view
+                ui.renderBattleRoster();
+            },
+
+            selectForUpgrade: (name) => {
+                const char = state.collection[name];
+                const db = DB[name];
+                const panel = document.getElementById('upgrade-panel');
+                
+                // Calculate stats based on stars
+                const multiplier = 1 + (char.star - 1) * 0.2;
+                
+                document.getElementById('up-name').innerText = name;
+                document.getElementById('up-star').innerText = char.star;
+                document.getElementById('up-hp').innerText = Math.floor(db.hp * multiplier);
+                document.getElementById('up-atk').innerText = Math.floor(db.atk * multiplier);
+                document.getElementById('up-skill').innerText = db.skill + (char.star>=3 ? " (强化)" : "");
+                
+                // Cost: 1->2 (10), 2->3 (20)...
+                const cost = char.star * 10; 
+                document.getElementById('up-cost').innerText = cost;
+                document.getElementById('up-own').innerText = char.fragments;
+                
+                panel.style.display = 'block';
+                panel.dataset.target = name;
+            },
+
+            starUp: () => {
+                const name = document.getElementById('upgrade-panel').dataset.target;
+                const char = state.collection[name];
+                const cost = char.star * 10;
+                
+                if (char.star >= 5) { alert("已达到满星！"); return; }
+                if (char.fragments < cost) { alert("碎片不足！"); return; }
+                
+                char.fragments -= cost;
+                char.star++;
+                alert(`${name} 升星成功！当前 ${char.star} 星！`);
+                
+                game.selectForUpgrade(name); // Refresh panel
+                ui.renderInventory();
+                ui.renderBattleRoster();
+            },
+
+            toggleTeam: (name, element) => {
+                const idx = state.team.indexOf(name);
+                if (idx > -1) {
+                    state.team.splice(idx, 1);
+                    element.classList.remove('selected');
+                } else {
+                    if (state.team.length >= 5) { // Current limit: 5
+                        alert("最多选择5名角色！");
+                        return;
+                    }
+                    state.team.push(name);
+                    element.classList.add('selected');
+                }
+                document.getElementById('team-count').innerText = state.team.length;
+                
+                // Check Bond
+                const factions = state.team.map(n => DB[n].faction);
+                const isBond = factions.length === 3 && factions.every(f => f === factions[0]);
+                document.getElementById('bond-bonus').style.display = isBond ? 'block' : 'none';
+            },
+
+            startBattle: () => {
+                if (state.team.length === 0) { alert("请先选择出战角色！"); return; }
+                
+                document.getElementById('battle-stage').style.display = 'block';
+                const logBox = document.getElementById('battle-log');
+                logBox.innerHTML = '<div class="log-turn">战斗开始！遭遇病魔！</div>';
+                
+                // Setup Stats
+                let myHp = 0;
+                let myAtk = 0;
+                
+                // Check Bond
+                const factions = state.team.map(n => DB[n].faction);
+                const isBond = factions.length === 3 && factions.every(f => f === factions[0]);
+                const bonus = isBond ? 1.15 : 1.0;
+
+                state.team.forEach(name => {
+                    const base = DB[name];
+                    const starMult = 1 + (state.collection[name].star - 1) * 0.2;
+                    myHp += base.hp * starMult * bonus;
+                    myAtk += base.atk * starMult * bonus;
+                });
+                
+                let enemyHp = 1000; // Boss HP
+                let enemyAtk = 50;
+                let maxMyHp = myHp;
+                let maxEnemyHp = enemyHp;
+
+                // Simple Turn Logic
+                let round = 1;
+                const interval = setInterval(() => {
+                    if (myHp <= 0 || enemyHp <= 0) {
+                        clearInterval(interval);
+                        logBox.innerHTML += myHp > 0 
+                            ? `<div class="log-turn" style="color:gold">战斗胜利！获得 100 灵石！</div>` 
+                            : `<div class="log-turn" style="color:gray">战斗失败...</div>`;
+                        if (myHp > 0) { state.gems += 100; ui.updateHeader(); }
+                        return;
+                    }
+
+                    // My Turn
+                    let log = `<div class="log-turn">第 ${round} 回合</div>`;
+                    
+                    // Trigger Skills
+                    state.team.forEach(name => {
+                        const char = DB[name];
+                        // 简化技能逻辑
+                        if (char.job === "岐黄") {
+                            let heal = char.atk * 0.5;
+                            myHp = Math.min(maxMyHp, myHp + heal);
+                            log += `<div>[${name}] 施展 <span class="log-heal">${char.skill}</span>，回复 ${Math.floor(heal)} 生命</div>`;
+                        } else if (char.job === "破军") {
+                            let dmg = char.atk * 1.5;
+                            enemyHp -= dmg;
+                            log += `<div>[${name}] 施展 <span class="log-dmg">${char.skill}</span>，造成 ${Math.floor(dmg)} 伤害</div>`;
+                        } else {
+                            // Support/Tank basic attack
+                            let dmg = char.atk;
+                            enemyHp -= dmg;
+                            log += `<div>[${name}] 攻击，造成 ${Math.floor(dmg)} 伤害</div>`;
+                        }
+                    });
+
+                    // Enemy Turn
+                    myHp -= enemyAtk;
+                    log += `<div>[病魔] 发起攻击，全队受到 ${enemyAtk} 伤害</div>`;
+
+                    // Update UI
+                    document.getElementById('my-team-stats').innerText = `HP: ${Math.floor(myHp)}/${Math.floor(maxMyHp)}`;
+                    document.getElementById('enemy-stats').innerText = `HP: ${Math.floor(enemyHp)}/${Math.floor(maxEnemyHp)}`;
+                    
+                    logBox.innerHTML += log;
+                    logBox.scrollTop = logBox.scrollHeight;
+                    round++;
+
+                }, 1000); // 1 sec per turn
+            }
+        };
+
+        // --- 4. 界面渲染 (UI Renderer) ---
+        const ui = {
+            switchTab: (tabId, btn) => {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById('view-' + tabId).classList.add('active');
+                
+                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+            },
+
+            updateHeader: () => {
+                document.getElementById('res-gem').innerText = state.gems;
+                document.getElementById('pity-count').innerText = state.pity;
+            },
+
+            showGachaResults: (results) => {
+                const container = document.getElementById('gacha-result');
+                container.style.display = 'grid';
+                container.innerHTML = '';
+                results.forEach(r => {
+                    const db = DB[r.name]; // Get full data for img
+                    const div = document.createElement('div');
+                    div.className = `card ${r.rarity}`;
+                    div.innerHTML = `
+                        <div class="card-rarity">${r.rarity}</div>
+                        <div class="card-img-box"><img src="${db.img}" class="card-img"></div>
+                        <div class="card-info">
+                            <div class="card-name">${r.name}</div>
+                            <div style="font-size:0.8em; color: #666;">${r.isNew ? "✨新获得!" : "💊转碎片"}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+
+            renderInventory: () => {
+                const container = document.getElementById('inventory-grid');
+                container.innerHTML = '';
+                Object.keys(state.collection).forEach(name => {
+                    const data = state.collection[name];
+                    const db = DB[name];
+                    const div = document.createElement('div');
+                    div.className = `card ${db.type}`;
+                    div.onclick = () => game.selectForUpgrade(name);
+                    div.innerHTML = `
+                        <div class="card-rarity">${db.type}</div>
+                        <div class="card-img-box"><img src="${db.img}" class="card-img"></div>
+                        <div class="card-info">
+                            <div class="card-name">${name}</div>
+                            <div class="card-faction faction-${db.faction}">${FACTION_NAMES[db.faction]}</div>
+                            <div class="card-stars">${"⭐".repeat(data.star)}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+
+            renderBattleRoster: () => {
+                const container = document.getElementById('battle-roster');
+                container.innerHTML = '';
+                Object.keys(state.collection).forEach(name => {
+                    const db = DB[name];
+                    const div = document.createElement('div');
+                    div.className = `card ${db.type} ${state.team.includes(name) ? 'selected' : ''}`;
+                    div.onclick = () => game.toggleTeam(name, div);
+                    div.innerHTML = `
+                        <div class="card-rarity">${db.type}</div>
+                        <div class="card-img-box"><img src="${db.img}" class="card-img"></div>
+                        <div class="card-info">
+                            <div class="card-name">${name}</div>
+                            <div class="card-faction faction-${db.faction}">${FACTION_NAMES[db.faction]}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        };
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
